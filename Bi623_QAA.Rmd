@@ -3,15 +3,15 @@ title: 'Bi623: RNA-Seq Quality Assessment Assignment'
 author: "Thai Nguyen"
 date: "Due 9/7/2021"
 output:
+  html_document:
+    df_print: paged
   pdf_document:
-    fig_caption: yes        
+    fig_caption: yes
 header-includes:
 - \usepackage{float}
 - \let\origfigure\figure
 - \let\endorigfigure\endfigure
-- \renewenvironment{figure}[1][2] {
-  \expandafter\origfigure\expandafter[H]} {
-  \endorigfigure}
+- \renewenvironment{figure}[1][2] { \expandafter\origfigure\expandafter[H]} { \endorigfigure}
 ---
 
 ```{r setup, include=FALSE}
@@ -26,7 +26,7 @@ library(rmarkdown)
 ```
 
 ## Objectives
-The objectives of this assignment are to use existing tools for quality assessment and adaptor trimming, compare the quality assessments to those from your own software, and to demonstrate your ability to summarize other important information about this RNA-Seq data set.
+The objectives of this assignment are to use existing tools for quality assessment and adapter trimming, compare the quality assessments to those from your own software, and to demonstrate your ability to summarize other important information about this RNA-Seq data set.
 
 ### Data: 
 Each of you will be working with 2 of the demultiplexed file pairs. For all steps below, process the two libraries separately. Library assignments are here: ```/projects/bgmp/shared/Bi623/QAA_data_assignments.txt```
@@ -276,7 +276,7 @@ The overall data quality of the two libraries is high (average qscores > 38 exce
 
 
 ***
-# Part 2 – Adaptor trimming comparison
+# Part 2 – Adapter trimming comparison
 
 
 #### 4. Create a new conda environment called ```QAA``` and install ```cutadapt``` and ```Trimmomatic```. Google around if you need a refresher on how to create conda environments. Make sure you check your installations with:
@@ -347,11 +347,13 @@ exit
  
 __Sanity check: Use your Unix skills to search for the adapter sequences in your datasets and confirm the expected sequence orientations. Report the commands you used, the reasoning behind them, and how you confirmed the adapter sequences.__
 
-As shown below, the R1 adapter sequence is present in forward orientation (5'- AGATCGGAAGAGCACACGTCTGAACTCCAGTCA -3') for 66732 of the 21_3G_both_S15_L008_R1 reads and 51173 of the 4_2C_mbnl_S4_L008_R1 reads. The R2 adapter sequence is present in forward orientation (5'- AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT -3') for 67707 of the 21_3G_both_S15_L008_R1 reads and 51593 of the 4_2C_mbnl_S4_L008_R1 reads.
+Running a ```zcat $fastq_gz_file | grep --color='auto' $adapter_seq``` command for the R1 adapter in the R1 read files shows that the R1 adapter tends to be present closer to the 3' end of the read sequence. The same trend occurs when running a similar command to find R2 adapters in the R2 read files.
 
-However, the reverse orientation (5'- ACTGACCTCAAGTCTGCACACGAGAAGGCTAGA -3') of the R1 adapter sequence was not present in any of the R1 reads in either dataset. In addition, the reverse orientation (5'- TGTGAGAAAGGGATGTGCTGCGAGAAGGCTAGA -3') of the R2 adapter sequence was not present in any of the R2 reads in either dataset.
+In addition, as shown below, the R1 adapter sequence is present in forward orientation (5'- AGATCGGAAGAGCACACGTCTGAACTCCAGTCA -3') for 66732 of the 21_3G_both_S15_L008_R1 reads and 51173 of the 4_2C_mbnl_S4_L008_R1 reads. The R2 adapter sequence is present in forward orientation (5'- AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT -3') for 67707 of the 21_3G_both_S15_L008_R1 reads and 51593 of the 4_2C_mbnl_S4_L008_R1 reads.
 
-Thus, the R1 adapter sequence is 5'- AGATCGGAAGAGCACACGTCTGAACTCCAGTCA -3' and the R2 adapter sequence is 5'- AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT -3'.
+However, the reverse orientation (5'- ACTGACCTCAAGTCTGCACACGAGAAGGCTAGA -3') of the R1 adapter sequence was not present in any of the R1 reads in either dataset. In addition, the reverse orientation (5'- TGTGAGAAAGGGATGTGCTGCGAGAAGGCTAGA -3') of the R2 adapter sequence was not present in any of the R2 reads in either dataset. Thus, the R1 adapter sequence is 5'- AGATCGGAAGAGCACACGTCTGAACTCCAGTCA -3' and the R2 adapter sequence is 5'- AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT -3'.
+
+Checking for the presence of the R2 adapter sequence in the R1 reads (and vice versa) also yielded counts of zero, indicating that the R1 adapters were correctly applied to the R1 reads and the R2 adapters were correctly applied to the R2 reads.
 
 __Bash script to count how many times each potential orientation (forward or reverse) of the adapter sequences occurs in the read sequences:__
 
@@ -399,6 +401,18 @@ zcat $set1_r2 | grep -c $adapter_r2_rev
 echo "4_2C_mbnl_S4_L008_R2 rev R2 adapters"
 zcat $set2_r2 | grep -c $adapter_r2_rev
 
+# search for R2 adapter forward sequence in R1 files
+echo "21_3G_both_S15_L008_R1, count of R2 forward adapters"
+zcat $set1_r1 | grep -c $adapter_r2
+echo "4_2C_mbnl_S4_L008_R1 count of R2 forward adapters"
+zcat $set2_r1 | grep -c $adapter_r2
+
+# search for R1 adapter forward sequence in R2 files
+echo "21_3G_both_S15_L008_R2 count of R1 forward adapters"
+zcat $set1_r2 | grep -c $adapter_r1
+echo "4_2C_mbnl_S4_L008_R2 count of R1 forward adapters"
+zcat $set2_r2 | grep -c $adapter_r1
+
 ```
 
 __Output of running the above script:__
@@ -419,6 +433,14 @@ __Output of running the above script:__
 21_3G_both_S15_L008_R2 rev R2 adapters
 0
 4_2C_mbnl_S4_L008_R2 rev R2 adapters
+0
+21_3G_both_S15_L008_R1, count of R2 forward adapters
+0
+4_2C_mbnl_S4_L008_R1 count of R2 forward adapters
+0
+21_3G_both_S15_L008_R2 count of R1 forward adapters
+0
+4_2C_mbnl_S4_L008_R2 count of R1 forward adapters
 0
 ```
 
@@ -528,12 +550,11 @@ dataset2_joined_df %>%
   labs(title = "Distribution of Quality-Trimmed Read Lengths for 4_2C_mbnl_S4_L008", x = "Trimmed Read Lengths (nt)", y = "Frequency of Read Length", fill = "Read File")
 
 #display joined datasets
-# paged_table(dataset1_joined_df)
-# paged_table(dataset2_joined_df)
 kable(dataset1_joined_df, caption = "Trimmed read length distribution for R1 and R2 reads in 21_3G_both_S15_L008")
 kable(dataset2_joined_df, caption = "Trimmed read length distribution for R1 and R2 reads in 4_2C_mbnl_S4_L008")
 
 ```
+
 
 ***
 # Part 3 – Alignment and strand-specificity
@@ -765,7 +786,27 @@ exit
 
 #### 11. Count reads that map to features using htseq-count. You should run htseq-count twice: once with ```--stranded=yes``` and again with ```--stranded=no```. Use default parameters otherwise.
 
+See below for first 20 lines and last 5 lines of htseq-count output for stranded and unstranded runs. 
+
 See pt3/ directory in QAA repository on Github for full htseq-count output files (55000+ lines each) from stranded and unstranded runs. Note that column 2 in each output file holds counts for the STAR-aligned 4_2C_mbnl_S4_L008 SAM file, and column 3 in each output file holds counts for the STAR-aligned 21_3G_both_S15_L008 SAM file.
+
+```{r}
+stranded_tibble = read_tsv("pt3/htseq_stranded_16214476.out", 
+                           col_names = c("Gene/Feature", "Read count (4_2C_mbnl_S4_L008)", "Read count (21_3G_both_S15_L008)"),
+                           show_col_types = FALSE)
+
+unstranded_tibble = read_tsv("pt3/htseq_unstranded_16214641.out",
+                             col_names = c("Gene/Feature", "Read count (4_2C_mbnl_S4_L008)", "Read count (21_3G_both_S15_L008)"),
+                             show_col_types = FALSE)
+
+kable(head(stranded_tibble, n = 20), caption = "Htseq-count output (stranded setting), first 20 lines")
+kable(tail(stranded_tibble, n = 5), caption = "Htseq-count output (stranded setting), last 5 lines")
+
+kable(head(unstranded_tibble, n = 20), caption = "Htseq-count output (unstranded setting), first 20 lines")
+kable(tail(unstranded_tibble, n = 5), caption = "Htseq-count output (stranded setting), last 5 lines")
+
+```
+
 
 __Bash script for htseq-count (stranded setting):__
 
